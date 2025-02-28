@@ -12,10 +12,15 @@
             color: white;
             text-align: center;
             padding: 20px;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
-        
+
         h1 {
-            font-size: 2.5em;
+            font-size: 2em;
             margin-bottom: 20px;
             text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
         }
@@ -27,22 +32,22 @@
 
         #board {
             display: grid;
-            grid-template-columns: repeat(4, 100px);
-            grid-template-rows: repeat(4, 100px);
-            gap: 10px;
+            grid-template-columns: repeat(4, 80px);
+            grid-template-rows: repeat(4, 80px);
+            gap: 8px;
             justify-content: center;
-            margin-top: 30px;
+            margin-top: 20px;
         }
 
         .cell {
-            width: 100px;
-            height: 100px;
+            width: 80px;
+            height: 80px;
             background-color: #ffffff;
             border-radius: 8px;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.5em;
+            font-size: 1.2em;
             cursor: pointer;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
@@ -54,14 +59,14 @@
         }
 
         .piece {
-            width: 80px;
-            height: 80px;
+            width: 60px;
+            height: 60px;
             background-color: #4CAF50;
             color: white;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.5em;
+            font-size: 1.2em;
             border-radius: 8px;
             cursor: move;
             user-select: none;
@@ -78,9 +83,10 @@
         }
 
         #score {
-            font-size: 1.5em;
-            margin-top: 20px;
+            font-size: 1.2em;
             font-weight: bold;
+            margin-top: 20px;
+            text-align: center;
         }
 
         .hover {
@@ -91,66 +97,97 @@
 <body>
 
     <h1>Jogo de Equações Deslizantes</h1>
-    <p>Arraste e solte as peças para formar equações válidas.</p>
+    <p>Resolva a equação arrastando o número correto para o "X".</p>
     
     <div id="board"></div>
     <div id="pieces"></div>
     <div id="score">Pontuação: 0</div>
 
     <script>
-        const pieces = [
-            { type: 'number', value: 5 },
-            { type: 'operation', value: '+' },
-            { type: 'number', value: 3 },
-            { type: 'operation', value: '=' },
-            { type: 'number', value: 8 },
-            { type: 'operation', value: '-' },
-            { type: 'number', value: 2 },
-            { type: 'operation', value: '=' },
-            { type: 'number', value: 6 },
-            { type: 'operation', value: '*' },
-            { type: 'number', value: 4 },
-            { type: 'operation', value: '=' }
-        ];
-
         let score = 0;
+        let equation;
+        let correctAnswer;
 
-        // Função para criar as peças
+        // Função para gerar uma nova equação aleatória
+        function generateEquation() {
+            const operations = ['+', '-', '*', '/'];
+            const randomOp = operations[Math.floor(Math.random() * operations.length)];
+            let leftOperand = Math.floor(Math.random() * 10) + 1; // Números de 1 a 10
+            let rightOperand = Math.floor(Math.random() * 10) + 1; // Números de 1 a 10
+            let xValue = Math.floor(Math.random() * 10) + 1; // Valor de "X" que o jogador deve encontrar
+
+            // Define a equação com "X" e resolve para "X"
+            let equationText = `${leftOperand} ${randomOp} X = ${leftOperand + rightOperand}`;
+            if (randomOp === '+') {
+                correctAnswer = leftOperand + rightOperand - xValue;
+            } else if (randomOp === '-') {
+                correctAnswer = leftOperand - rightOperand - xValue;
+            } else if (randomOp === '*') {
+                correctAnswer = (leftOperand * rightOperand) / xValue;
+            } else {
+                correctAnswer = leftOperand / rightOperand - xValue;
+            }
+
+            // Atualiza a equação e prepara as peças
+            equation = [leftOperand.toString(), randomOp, "X", '=', (leftOperand + rightOperand).toString()];
+            createBoard();
+            createPieces();
+        }
+
+        // Função para criar as peças (números e operações)
         function createPieces() {
             const piecesContainer = document.getElementById('pieces');
-            piecesContainer.innerHTML = ''; 
+            piecesContainer.innerHTML = '';  // Limpar antes de adicionar novas peças
 
-            pieces.forEach(piece => {
+            const pieces = [correctAnswer, 3, 5, 7, 2];  // Números disponíveis para o jogador
+
+            pieces.forEach(value => {
                 const pieceElement = document.createElement('div');
                 pieceElement.classList.add('piece');
-                pieceElement.textContent = piece.value;
+                pieceElement.textContent = value;
                 pieceElement.draggable = true;
-                pieceElement.dataset.value = piece.value;
+                pieceElement.dataset.value = value;
 
                 pieceElement.addEventListener('dragstart', dragStart);
                 pieceElement.addEventListener('dragend', dragEnd);
+
+                // Adicionando eventos de toque
+                pieceElement.addEventListener('touchstart', touchStart);
+                pieceElement.addEventListener('touchend', touchEnd);
+                pieceElement.addEventListener('touchmove', touchMove);
+
                 piecesContainer.appendChild(pieceElement);
             });
         }
 
-        // Função para criar o tabuleiro
+        // Função para criar o tabuleiro com a equação
         function createBoard() {
             const board = document.getElementById('board');
-            board.innerHTML = ''; 
+            board.innerHTML = ''; // Limpar o tabuleiro
 
-            for (let i = 0; i < 16; i++) {
+            equation.forEach((value, index) => {
                 const cell = document.createElement('div');
                 cell.classList.add('cell');
-                cell.dataset.index = i;
+                cell.dataset.index = index;
+                
+                if (value === "X") {
+                    cell.setAttribute('id', 'x-cell');  // Célula onde o jogador coloca o X
+                } else {
+                    cell.textContent = value;
+                }
 
-                // Adicionar os eventos de arrastar e soltar
                 cell.addEventListener('dragover', dragOver);
                 cell.addEventListener('dragenter', dragEnter);
                 cell.addEventListener('dragleave', dragLeave);
                 cell.addEventListener('drop', drop);
 
+                // Adicionando eventos de toque para as células
+                cell.addEventListener('touchstart', touchStartCell);
+                cell.addEventListener('touchend', touchEndCell);
+                cell.addEventListener('touchmove', touchMoveCell);
+
                 board.appendChild(cell);
-            }
+            });
         }
 
         // Funções de manipulação do arrastar e soltar
@@ -180,37 +217,84 @@
             event.preventDefault();
             event.target.classList.remove('hover');
 
-            // Recuperar o valor da peça arrastada
             const value = event.dataTransfer.getData('text');
 
-            // Colocar a peça na célula
-            if (event.target.classList.contains('cell') && !event.target.textContent) {
+            if (event.target.id === 'x-cell' && value == correctAnswer) {
                 event.target.textContent = value;
-                checkEquation();
-            }
-        }
-
-        // Verificar se a equação formada está correta
-        function checkEquation() {
-            const cells = document.querySelectorAll('.cell');
-            const equation = Array.from(cells).map(cell => cell.textContent).join('');
-            const isValid = validateEquation(equation);
-
-            if (isValid) {
                 score += 10;
                 document.getElementById('score').textContent = `Pontuação: ${score}`;
+                alert("Parabéns! Você acertou o valor de X.");
+                generateEquation();  // Gera uma nova equação ao acertar
+            } else if (event.target.id === 'x-cell') {
+                alert("Ops, tente novamente! O valor de X está errado.");
             }
         }
 
-        // Função para validar a equação (muito simples)
-        function validateEquation(equation) {
-            const equationRegex = /^(\d+[\+\-\*\/]\d+=[\d]+)$/; // Ex: "3+5=8"
-            return equationRegex.test(equation);
+        // Funções de Toque para as Células
+        let touchStartX = 0, touchStartY = 0;
+
+        function touchStart(event) {
+            const touch = event.touches[0];
+            touchStartX = touch.pageX;
+            touchStartY = touch.pageY;
+            event.target.classList.add('dragging');
+        }
+
+        function touchEnd(event) {
+            const touch = event.changedTouches[0];
+            const deltaX = touch.pageX - touchStartX;
+            const deltaY = touch.pageY - touchStartY;
+
+            if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
+                // Se o movimento for muito pequeno, é um toque simples
+                return;
+            }
+
+            // Mover a peça
+            handleTouchMove(event);
+        }
+
+        function touchMove(event) {
+            event.preventDefault();
+            handleTouchMove(event);
+        }
+
+        function handleTouchMove(event) {
+            const touch = event.touches[0];
+            const piece = event.target;
+            piece.style.left = `${touch.pageX - 30}px`;
+            piece.style.top = `${touch.pageY - 30}px`;
+        }
+
+        function touchStartCell(event) {
+            event.preventDefault();
+            const touch = event.touches[0];
+            const targetCell = event.target;
+            targetCell.classList.add('hover');
+        }
+
+        function touchEndCell(event) {
+            event.preventDefault();
+            const targetCell = event.target;
+            targetCell.classList.remove('hover');
+
+            // Verificar se a célula correta foi tocada e se o valor está correto
+            const value = document.querySelector('.piece.dragging')?.textContent;
+            if (targetCell.id === 'x-cell' && value == correctAnswer) {
+                targetCell.textContent = value;
+                score += 10;
+                document.getElementById('score').textContent = `Pontuação: ${score}`;
+                alert("Parabéns! Você acertou o valor de X.");
+                generateEquation();  // Gera uma nova equação ao acertar
+            }
+        }
+
+        function touchMoveCell(event) {
+            event.preventDefault();
         }
 
         // Inicializar o jogo
-        createBoard();
-        createPieces();
+        generateEquation();  // Inicia o jogo com uma equação aleatória
     </script>
 </body>
 </html>
