@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Equações Deslizantes</title>
+    <style>
+        /* Estilos Gerais */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #5c258d, #4389a2);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        p {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            grid-template-rows: repeat(4, 100px);
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .cell:hover {
+            background-color: #e1e1e1;
+            box-shadow: 0px 8px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .piece {
+            width: 80px;
+            height: 80px;
+            background-color: #4CAF50;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            border-radius: 8px;
+            cursor: move;
+            user-select: none;
+            transition: transform 0.3s ease;
+        }
+
+        .piece.dragging {
+            opacity: 0.5;
+            transform: scale(1.1);
+        }
+
+        #pieces {
+            margin-top: 20px;
+        }
+
+        #score {
+            font-size: 1.5em;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .hover {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Jogo de Equações Deslizantes</h1>
+    <p>Arraste e solte as peças para formar equações válidas.</p>
+    
+    <div id="board"></div>
+    <div id="pieces"></div>
+    <div id="score">Pontuação: 0</div>
+
+    <script>
+        const pieces = [
+            { type: 'number', value: 5 },
+            { type: 'operation', value: '+' },
+            { type: 'number', value: 3 },
+            { type: 'operation', value: '=' },
+            { type: 'number', value: 8 },
+            { type: 'operation', value: '-' },
+            { type: 'number', value: 2 },
+            { type: 'operation', value: '=' },
+            { type: 'number', value: 6 },
+            { type: 'operation', value: '*' },
+            { type: 'number', value: 4 },
+            { type: 'operation', value: '=' }
+        ];
+
+        let score = 0;
+
+        // Função para criar as peças
+        function createPieces() {
+            const piecesContainer = document.getElementById('pieces');
+            piecesContainer.innerHTML = ''; 
+
+            pieces.forEach(piece => {
+                const pieceElement = document.createElement('div');
+                pieceElement.classList.add('piece');
+                pieceElement.textContent = piece.value;
+                pieceElement.draggable = true;
+                pieceElement.dataset.value = piece.value;
+
+                pieceElement.addEventListener('dragstart', dragStart);
+                pieceElement.addEventListener('dragend', dragEnd);
+                piecesContainer.appendChild(pieceElement);
+            });
+        }
+
+        // Função para criar o tabuleiro
+        function createBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = ''; 
+
+            for (let i = 0; i < 16; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+
+                // Adicionar os eventos de arrastar e soltar
+                cell.addEventListener('dragover', dragOver);
+                cell.addEventListener('dragenter', dragEnter);
+                cell.addEventListener('dragleave', dragLeave);
+                cell.addEventListener('drop', drop);
+
+                board.appendChild(cell);
+            }
+        }
+
+        // Funções de manipulação do arrastar e soltar
+        function dragStart(event) {
+            event.dataTransfer.setData('text', event.target.dataset.value);
+            setTimeout(() => event.target.classList.add('dragging'), 0);
+        }
+
+        function dragEnd(event) {
+            event.target.classList.remove('dragging');
+        }
+
+        function dragOver(event) {
+            event.preventDefault();
+        }
+
+        function dragEnter(event) {
+            event.preventDefault();
+            event.target.classList.add('hover');
+        }
+
+        function dragLeave(event) {
+            event.target.classList.remove('hover');
+        }
+
+        function drop(event) {
+            event.preventDefault();
+            event.target.classList.remove('hover');
+
+            // Recuperar o valor da peça arrastada
+            const value = event.dataTransfer.getData('text');
+
+            // Colocar a peça na célula
+            if (event.target.classList.contains('cell') && !event.target.textContent) {
+                event.target.textContent = value;
+                checkEquation();
+            }
+        }
+
+        // Verificar se a equação formada está correta
+        function checkEquation() {
+            const cells = document.querySelectorAll('.cell');
+            const equation = Array.from(cells).map(cell => cell.textContent).join('');
+            const isValid = validateEquation(equation);
+
+            if (isValid) {
+                score += 10;
+                document.getElementById('score').textContent = `Pontuação: ${score}`;
+            }
+        }
+
+        // Função para validar a equação (muito simples)
+        function validateEquation(equation) {
+            const equationRegex = /^(\d+[\+\-\*\/]\d+=[\d]+)$/; // Ex: "3+5=8"
+            return equationRegex.test(equation);
+        }
+
+        // Inicializar o jogo
+        createBoard();
+        createPieces();
+    </script>
+</body>
+</html>
